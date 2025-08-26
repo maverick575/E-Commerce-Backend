@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Login</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+<div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+    <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Welcome Back</h2>
+
+    <!-- Login Form -->
+    <form id="loginForm">
+        <!-- Email Input -->
+        <div class="mb-4">
+            <label for="email" class="block text-gray-700 text-sm font-medium mb-2">Email Address</label>
+            <input type="email" id="email" name="email"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   placeholder="you@example.com" required>
+        </div>
+
+        <!-- Password Input -->
+        <div class="mb-6">
+            <label for="password" class="block text-gray-700 text-sm font-medium mb-2">Password</label>
+            <input type="password" id="password" name="password"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   placeholder="••••••••" required>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit"
+                class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-200">
+            Sign In
+        </button>
+    </form>
+
+    <!-- Message Area for Success/Error -->
+    <div id="message" class="mt-4 text-center text-sm"></div>
+
+    <!-- Area to display the retrieved JWT -->
+    <div id="jwt-container" class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 hidden">
+        <h3 class="text-md font-semibold text-gray-700 mb-2">Authentication Token (JWT)</h3>
+        <p id="jwt-token" class="text-xs text-gray-600 break-all bg-white p-2 rounded"></p>
+        <button id="copy-jwt" class="mt-3 w-full bg-gray-200 text-gray-700 text-sm py-1.5 rounded-lg hover:bg-gray-300 transition duration-200">Copy Token</button>
+    </div>
+
+    <!-- Link to Register Page -->
+    <p class="text-center text-gray-600 text-sm mt-6">
+        Don't have an account?
+        <a href="#" class="text-blue-600 hover:underline">Sign up</a>
+    </p>
+</div>
+
+<script>
+    const loginForm = document.getElementById('loginForm');
+    const messageDiv = document.getElementById('message');
+    const jwtContainer = document.getElementById('jwt-container');
+    const jwtTokenP = document.getElementById('jwt-token');
+    const copyJwtButton = document.getElementById('copy-jwt');
+
+    loginForm.addEventListener('submit', async (event) => {
+        // 1. Prevent the default form submission which reloads the page
+        event.preventDefault();
+
+        // 2. Clear previous messages
+        messageDiv.textContent = '';
+        messageDiv.className = 'mt-4 text-center text-sm';
+        jwtContainer.classList.add('hidden');
+
+        // 3. Get user input from the form
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        // 4. Define the API endpoint for login
+        // IMPORTANT: Change this URL to match your backend's login endpoint
+        const loginEndpoint = 'http://localhost:8080/api/auth/login';
+
+        try {
+            // 5. Make the API call using fetch()
+            const response = await fetch(loginEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email,
+                    password: password
+                }),
+            });
+
+            // 6. Handle the response from the backend
+            if (response.ok) {
+                // If login is successful (e.g., status 200)
+                const data = await response.json();
+
+                // Assuming the backend returns a JWT in a field named 'token' or 'jwt'
+                const token = data.token || data.jwt;
+
+                if (token) {
+                    // Save the token to the browser's local storage
+                    localStorage.setItem('jwtToken', token);
+
+                    // Display success message and the token
+                    messageDiv.textContent = 'Login successful!';
+                    messageDiv.classList.add('text-green-600');
+                    jwtTokenP.textContent = token;
+                    jwtContainer.classList.remove('hidden');
+
+                } else {
+                    throw new Error("Token not found in response.");
+                }
+
+            } else {
+                // If login fails (e.g., status 401 Unauthorized)
+                const errorData = await response.json();
+                const errorMessage = errorData.message || 'Invalid email or password.';
+                throw new Error(errorMessage);
+            }
+
+        } catch (error) {
+            // 7. Handle any network errors or errors thrown from the response handling
+            messageDiv.textContent = `Error: ${error.message}`;
+            messageDiv.classList.add('text-red-600');
+        }
+    });
+
+    // Add functionality to the copy button
+    copyJwtButton.addEventListener('click', () => {
+        const tokenToCopy = jwtTokenP.textContent;
+
+        // Use the Clipboard API (modern approach)
+        if (navigator.clipboard) {
+             navigator.clipboard.writeText(tokenToCopy).then(() => {
+                copyJwtButton.textContent = 'Copied!';
+                setTimeout(() => { copyJwtButton.textContent = 'Copy Token'; }, 2000);
+            });
+        } else {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = tokenToCopy;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            copyJwtButton.textContent = 'Copied!';
+            setTimeout(() => { copyJwtButton.textContent = 'Copy Token'; }, 2000);
+        }
+    });
+</script>
+
+</body>
+</html>
